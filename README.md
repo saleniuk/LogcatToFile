@@ -27,7 +27,7 @@ Add this activity to your manifest:
 Init somewhere in your project (i.e. in Application class):
 ```
 if (BuildConfig.DEBUG)
-    LogcatToFile.init(this, logFile, Parameter("*", Priority.DEBUG))
+    LogcatToFile.init(this, logDirectory, Parameter("*", Priority.DEBUG))
 ```
 
 Licence
