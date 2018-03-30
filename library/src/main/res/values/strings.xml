@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">Library</string>
+
+    <string name="log_session_prefix">Log session prefix</string>
+    <string name="log_session_running">Log session running</string>
+    <string name="log_session_stopped">Log session stopped</string>
+    <string name="start">Start</string>
+    <string name="stop">Stop</string>
+    <string name="close">Close</string>
 </resources>

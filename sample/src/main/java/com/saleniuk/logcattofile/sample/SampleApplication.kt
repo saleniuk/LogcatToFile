@@ -14,9 +14,8 @@ class SampleApplication : Application() {
 
         val appDirectory = File(Environment.getExternalStorageDirectory().absolutePath + File.separator + applicationInfo.packageName)
         val logDirectory = File(appDirectory.absolutePath + File.separator + "log")
-        val logFile = File(logDirectory, "logcat" + System.currentTimeMillis() + ".txt")
 
         if (BuildConfig.DEBUG)
-            LogcatToFile.init(this, logFile, Parameter("*", Priority.DEBUG))
+            LogcatToFile.init(this, logDirectory, Parameter("*", Priority.DEBUG))
     }
 }

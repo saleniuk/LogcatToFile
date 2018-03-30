@@ -17,6 +17,13 @@ Then, add the library dependency:
 compile 'com.github.saleniuk:logcattofile:0.0.1-alpha'
 ```
 
+Add this activity to your manifest:
+```
+<activity
+    android:name="com.saleniuk.logcattofile.SessionNameActivity"
+    android:theme="@style/ThemeTransparent"/>
+```
+
 Init somewhere in your project (i.e. in Application class):
 ```
 if (BuildConfig.DEBUG)

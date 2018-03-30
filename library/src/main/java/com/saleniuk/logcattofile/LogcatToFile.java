@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.graphics.BitmapFactory;
 import android.os.Environment;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
@@ -20,8 +21,21 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 
 public class LogcatToFile {
+
+    private static final int NOTIFICATION_ID = 0;
+
+    // determines if logs are being saved to file or not
+    private static boolean isRunning = false;
+
+    // file to which logs are saved
+    private static File logDirectory;
+
+    // list of logcat parameters
+    private static Parameter[] parameters;
 
     /* Checks if external storage is available for read and write */
     public static boolean isExternalStorageWritable() {
@@ -43,7 +57,23 @@ public class LogcatToFile {
     }
 
 
-    public static void init(final Context context, final File logFile, final Parameter... parameters) {
+    public static void init(final Context context, final File logDirectory, final Parameter... parameters) {
+
+        LogcatToFile.logDirectory = logDirectory;
+        LogcatToFile.isRunning = true;
+        LogcatToFile.parameters = parameters;
+
+        // register receivers to handle state changes
+        NotificationDeleteReceiver notificationDeleteReceiver = new NotificationDeleteReceiver();
+        context.registerReceiver(notificationDeleteReceiver,
+                new IntentFilter(context.getPackageName() + ".stop.logs"));
+        context.registerReceiver(notificationDeleteReceiver,
+                new IntentFilter(context.getPackageName() + ".start.logs"));
+        context.registerReceiver(notificationDeleteReceiver,
+                new IntentFilter(context.getPackageName() + ".close.logs"));
+
+        // create log folder
+        logDirectory.mkdirs();
 
         if (context.checkCallingOrSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
                 PackageManager.PERMISSION_GRANTED
@@ -63,16 +93,25 @@ public class LogcatToFile {
                         public void onComplete(PermissionResponse permissionResponse) {
                             Toast.makeText(context, "Granted: " + permissionResponse.isGranted(),
                                     Toast.LENGTH_SHORT).show();
-                            init(context, logFile, parameters);
+                            init(context, logDirectory, parameters);
                         }
                     });
             return;
         }
 
+        stopLogs(context);
+    }
+
+    public static void startLogs(Context context) {
+        startLogs(context, "");
+    }
+
+    public static void startLogs(Context context, String logFilePrefix) {
         if (isExternalStorageWritable()) {
 
-            // create log folder
-            logFile.getParentFile().mkdirs();
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+            final File logFile = new File(logDirectory,
+                    (logFilePrefix + "_" + simpleDateFormat.format(Calendar.getInstance().getTime()) + ".txt"));
 
             // clear the previous logcat and then write the new one to the file
             try {
@@ -80,26 +119,29 @@ public class LogcatToFile {
                 if (parametersToSet == null || (parametersToSet != null && parametersToSet.length == 0)) {
                     parametersToSet = new Parameter[]{new Parameter("*", Priority.DEBUG)};
                 }
-                Process process = Runtime.getRuntime().exec("logcat -c");
-                process = Runtime.getRuntime().exec("logcat -f " + logFile + StringUtils.join(" ", parametersToSet));
 
-                context.registerReceiver(new NotificationDeleteReceiver(),
-                        new IntentFilter(context.getPackageName() + ".stop.logs"));
+                Process process = Runtime.getRuntime().exec("logcat -c");
+                process = Runtime.getRuntime().exec("logcat -f " + logFile + StringUtils.join(" ",
+                        parametersToSet));
 
                 NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context)
-                        .setSmallIcon(context.getApplicationInfo().icon)
+                        .setLargeIcon(
+                                BitmapFactory.decodeResource(context.getResources(), context.getApplicationInfo().icon))
+                        .setSmallIcon(R.drawable.icon_record)
                         .setContentTitle(context.getApplicationInfo().name)
-                        .setContentText("Log session running, click to stop")
+                        .setContentText("Log session running")
                         .setAutoCancel(true)
                         .setOngoing(true)
                         .setContentIntent(PendingIntent.getBroadcast(
-                                context, 0, new Intent(context.getPackageName() + ".stop.logs"), 0))
-                        .setDeleteIntent(PendingIntent.getBroadcast(
-                                context, 0, new Intent(context.getPackageName() + ".stop.logs"), 0))
-                        .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+                                context, 0, new Intent(context.getPackageName() + ".stop.logs"),
+                                0))
+                        .addAction(R.drawable.icon_stop, "Stop", PendingIntent.getBroadcast(
+                                context, 0, new Intent(context.getPackageName() + ".stop.logs"),
+                                0))
+                        .setPriority(NotificationCompat.PRIORITY_MAX);
 
                 NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
-                notificationManager.notify(0, mBuilder.build());
+                notificationManager.notify(NOTIFICATION_ID, mBuilder.build());
 
             } catch (IOException e) {
                 e.printStackTrace();
@@ -112,15 +154,51 @@ public class LogcatToFile {
         }
     }
 
+    public static void stopLogs(Context context) {
+
+        try {
+            Process process = Runtime.getRuntime().exec("logcat -c");
+            process = Runtime.getRuntime().exec("logcat -f stdout");
+            isRunning = false;
+
+            NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context)
+                    .setLargeIcon(
+                            BitmapFactory.decodeResource(context.getResources(), context.getApplicationInfo().icon))
+                    .setSmallIcon(R.drawable.icon_stop)
+                    .setContentTitle(context.getApplicationInfo().name)
+                    .setContentText("Log session stopped")
+                    .setAutoCancel(true)
+                    .setOngoing(true)
+                    .setContentIntent(PendingIntent.getBroadcast(
+                            context, 0, new Intent(context.getPackageName() + ".start.logs"),
+                            0))
+                    .addAction(R.drawable.icon_record, "Start", PendingIntent.getBroadcast(
+                            context, 0, new Intent(context.getPackageName() + ".start.logs"),
+                            0))
+                    .addAction(R.drawable.icon_close, "Close", PendingIntent.getBroadcast(
+                            context, 0, new Intent(context.getPackageName() + ".close.logs"),
+                            0))
+                    .setPriority(NotificationCompat.PRIORITY_MAX);
+
+            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
+            notificationManager.notify(NOTIFICATION_ID, mBuilder.build());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     static class NotificationDeleteReceiver extends BroadcastReceiver {
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            try {
-                Process process = Runtime.getRuntime().exec("logcat -c");
-                process = Runtime.getRuntime().exec("logcat -f stdout");
-            } catch (IOException e) {
-                e.printStackTrace();
+            if (intent.getAction().equals(context.getPackageName() + ".stop.logs")) {
+                stopLogs(context);
+            } else if (intent.getAction().equals(context.getPackageName() + ".start.logs")) {
+//                startLogs(context);
+                context.startActivity(new Intent(context, SessionNameActivity.class));
+                context.sendBroadcast(new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS));
+            } else if (intent.getAction().equals(context.getPackageName() + ".close.logs")) {
+                NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID);
             }
         }
     }
