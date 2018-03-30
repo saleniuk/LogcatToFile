@@ -1,19 +1,13 @@
 package com.saleniuk.logcattofile.sample
 
 import android.os.Bundle
-import android.os.Environment
 import android.os.Handler
 import android.support.design.widget.Snackbar
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import com.saleniuk.logcattofile.LogcatToFile
-import com.saleniuk.logcattofile.Parameter
-import com.saleniuk.logcattofile.Priority
-
 import kotlinx.android.synthetic.main.activity_main.*
-import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
@@ -29,12 +23,6 @@ class MainActivity : AppCompatActivity() {
             Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                     .setAction("Action", null).show()
         }
-
-        val appDirectory = File(Environment.getExternalStorageDirectory().absolutePath + "/MyPersonalAppFolder")
-        val logDirectory = File(appDirectory.absolutePath + "/log")
-        val logFile = File(logDirectory, "logcat" + System.currentTimeMillis() + ".txt")
-
-        LogcatToFile.init(this, logFile, Parameter("*", Priority.DEBUG))
 
         handler.postDelayed(runnable, 500)
     }

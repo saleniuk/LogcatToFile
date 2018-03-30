@@ -17,9 +17,10 @@ Then, add the library dependency:
 compile 'com.github.saleniuk:logcattofile:0.0.1-alpha'
 ```
 
-Init in Application class:
+Init somewhere in your project (i.e. in Application class):
 ```
-LogcatToFile.init(this, logFile, Parameter("*", Priority.DEBUG))
+if (BuildConfig.DEBUG)
+    LogcatToFile.init(this, logFile, Parameter("*", Priority.DEBUG))
 ```
 
 Licence
