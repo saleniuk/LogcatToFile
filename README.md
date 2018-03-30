@@ -14,7 +14,7 @@ repositories {
 
 Then, add the library dependency:
 ```gradle
-compile 'com.github.saleniuk:logcattofile:0.0.1-alpha'
+compile 'com.github.saleniuk:logcattofile:0.0.2-alpha'
 ```
 
 Add this activity to your manifest:
